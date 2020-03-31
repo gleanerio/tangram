@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  tangram:
+    image: fils/p418tangram:0.1.15
+    ports:
+       - "8080:8080"
+    networks:
+       - fac_default
+
+networks:
+  fac_default:
+    driver: overlay

@@ -1,0 +1,11 @@
+Tangram
+EarthCube Project 418 / 419
+This is an Alpha service for a SHACL validation service.   All the real work is being done by 
+pySHACL (https://github.com/RDFLib/pySHACL).   This is just a simple wrapper
+around it.  You can check out some notes on this service and how to invoke it 
+at https://github.com/geoschemas-org/geoshapes.
+
+If you are simply testing local files you should download and use pySHACL on your workstsation.  If you 
+are doing a workflow you should pull down the container or pull the service code from Tangram and run it 
+locally.   Both these approaches are more performant than using this service.  
+
