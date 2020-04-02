@@ -21,7 +21,6 @@ app.config['SWAGGER'] = {
 }
 
 swagger_template = {
-    "swagger":"2.0",
     "info": {
         "title": "Tangram SHACL Verification",
         "description":"Service for evaluating schema.org content against ESIP Science on schema.org guidelines.",
@@ -120,30 +119,26 @@ class VerifyView(MethodView):
     def get(self):
         '''
         Perform SHACL validation on provided data and SHACL sources.
+
+        The locations of the data graph and shacl shape graph are provided as URLs, and
+        must be accessible without authentication. The data graph must in serialized in
+        json-ld and the SHACL graph in turtle.
         ---
         parameters:
-        - name: "datagraph"
-          in: "query"
-          description: "URL for data graph source"
-          required: true
-        - name: "shapegraph"
-          in: "query"
-          description: "URL for SHACL graph source"
-          required: true
-        - name: format
-          in: "query"
-          description: Format of response
-          type: "array"
-          items:
+          - name: "datagraph"
+            in: "query"
+            description: "URL for data graph source"
+            required: true
+          - name: "shapegraph"
+            in: "query"
+            description: "URL for SHACL graph source"
+            required: true
+          - name: format
+            in: "query"
+            description: Format of response
             type: "string"
-            enum:
-            - "human"
-            - "json-ld"
-            - "turtle"
-            - "nt"
-            - "n3"
-            default: "human"
-          collectionFormat: "single"
+            enum: ['human', 'json-ld', 'turtle', 'nt', 'n3']
+            default: human
         produces:
           - text/plain
           - text/turtle
@@ -157,29 +152,32 @@ class VerifyView(MethodView):
         '''
         data_graph = None
         shacl_graph = None
+        out_format = request.args.get('format', 'human')
+        if out_format not in OUTPUT_FORMATS.keys():
+            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
         try:
             data_graph = rdflib.ConjunctiveGraph()
-            data_graph.parse(request.args.get['datagraph'], format="json-ld")
+            data_graph.parse(request.args['datagraph'], format="json-ld")
         except KeyError as e:
             return Response(status=422, response="Data graph URL is required.")
         except Exception as e:
             return Response(status=422, response=str(e))
         try:
             shacl_graph = rdflib.ConjunctiveGraph()
-            shacl_graph.parse(request.files['shapegraph'], format="turtle")
+            shacl_graph.parse(request.args['shapegraph'], format="turtle")
         except KeyError as e:
             return Response(status=422, response="SHACL shape graph URL is required.")
         except Exception as e:
             return Response(status=422, response=str(e))
-        out_format = request.args.get('format', 'human')
-        if out_format not in OUTPUT_FORMATS.keys():
-            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
         return self.doVerification(data_graph, shacl_graph, out_format)
 
 
     def post(self):
         '''
         Perform SHACL validation on provided data and SHACL shape graphs.
+
+        The data graph and SHACL shape graph are provided as file uploads.
+        The data graph must in serialized in json-ld and the SHACL graph in turtle.
         ---
         consumes:
           - multipart/form-data
@@ -202,17 +200,9 @@ class VerifyView(MethodView):
           - in: formData
             name: format
             description: Format of response
-            type: "array"
-            items:
-              type: "string"
-              enum:
-              - "human"
-              - "json-ld"
-              - "turtle"
-              - "nt"
-              - "n3"
-              default: "human"
-            collectionFormat: "single"
+            type: "string"
+            enum: ['human', 'json-ld', 'turtle', 'nt', 'n3']
+            default: human
         responses:
           422:
             description: Missing or invalid input data
@@ -222,6 +212,10 @@ class VerifyView(MethodView):
         '''
         data_graph = None
         shacl_graph = None
+        out_format = request.form.get('format', 'human')
+        app.logger.debug("out_format = %s", out_format)
+        if out_format not in OUTPUT_FORMATS.keys():
+            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
         try:
             data_graph = rdflib.ConjunctiveGraph()
             data_graph.parse(request.files['datagraph'], format="json-ld")
@@ -236,15 +230,10 @@ class VerifyView(MethodView):
             return Response(status=422, response="SHACL shape graph file is required.")
         except Exception as e:
             return Response(status=422, response=str(e))
-        out_format = request.form.get('format', 'human')
-        app.logger.debug("out_format = %s", out_format)
-        if out_format not in OUTPUT_FORMATS.keys():
-            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
         return self.doVerification(data_graph, shacl_graph, out_format)
 
 
 app.add_url_rule('/verify', view_func=VerifyView.as_view('verify'))
-app.add_url_rule('/uploader', view_func=VerifyView.as_view('uploader'))
 
 
 @app.route("/")
