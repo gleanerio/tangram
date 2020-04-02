@@ -33,3 +33,7 @@ curl -F  'datagraph=@./datagraphs/dataset-minimal-BAD.json-ld'  -F  'shapegraph=
 ```bash
 httpclient "https://tangram.gleaner.io/ucheck?url=http://opencoredata.org/doc/dataset/b8d7bd1b-ef3b-4b08-a327-e28e1420adf0&format=human&shape=required"
 ```
+
+## Install
+
+Local for testing. Requires rdflib and rdflib-jsonld from github.

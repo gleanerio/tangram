@@ -1,20 +1,47 @@
 import os
-from flask import Flask, abort, request, jsonify, send_from_directory, render_template
+from flask import Flask, Response, request, redirect
+from flask.views import MethodView
 from flask_cors import CORS
 from pyshacl import validate
-import json
 import rdflib
 import requests
-from rdflib import Graph, plugin
-from rdflib.serializer import Serializer
 from bs4 import BeautifulSoup
 import urllib
 import urllib.request
+import logging
+
+from flasgger import Swagger
 
 app = Flask(__name__,
             static_url_path='',
             static_folder='web/static',
             template_folder='web/templates')
+app.config['SWAGGER'] = {
+    'title':'Tangram',
+}
+
+swagger_template = {
+    "swagger":"2.0",
+    "info": {
+        "title": "Tangram SHACL Verification",
+        "description":"Service for evaluating schema.org content against ESIP Science on schema.org guidelines.",
+        "version":"0.2.0",
+    },
+    "schemes": [
+        "http",
+        "https"
+    ]
+}
+
+swagger = Swagger(app, template=swagger_template)
+
+OUTPUT_FORMATS = {
+    'human': 'text/plain',
+    'json-ld':'application/ld+json',
+    'turtle':'text/turtle',
+    'nt':'text/plain',
+    'n3':'text/n3',
+}
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -64,56 +91,165 @@ def netcheck():
         else:
             return v_graph.serialize(format="nt")
 
-# /validate 
 
-@app.route('/uploader', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        # should try these too then error if not loadable to graph
-        dg = request.files['datagraph']
-        sg = request.files['shapegraph']
-        try:
-            f = request.form['format']
-        except:
-            f = 'robot'
+class VerifyView(MethodView):
 
-        # Make some graphs and parse our uploads into them
-        # How does python treat errors here?   trapped by Flask?  (see note about try above)
-        s = rdflib.Graph()
-        sr = s.parse(sg, format="ttl")
-        d = rdflib.Graph()
-        dr = d.parse(dg, format="json-ld")
-
+    def doVerification(self, data_graph, shacl_graph, out_format, needs_schemaorg=False):
         # call pySHACL
-        conforms, v_graph, v_text = validate(dr, shacl_graph=sr,
+        ont_graph = None
+        inference = "none"
+        if needs_schemaorg:
+            # TODO: handle this
+            # Load schema.org graph
+            # set inference to 'rdfs'
+            pass
+        conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph,
                                              data_graph_format="json-ld",
                                              shacl_graph_format="ttl",
-                                             inference='none', debug=False,
+                                             ont_graph=ont_graph,
+                                             inference=inference, debug=False,
                                              serialize_report_graph=False)
-
-        # I default to robot, but then never bother to test that  :(
-        if f == 'human':
-            return '{} {}'.format(conforms, v_text)
+        if out_format == 'human':
+            return Response(v_text, mimetype="text/plain")
         else:
-            # return v_graph.serialize(format="nt")
-            skolemver = v_graph.skolemize(authority="http://ld.geoschemas.org")
-            return skolemver.serialize(format="nt")
+            skolemized = v_graph.skolemize(authority="http://ld.geoschemas.org", basepath="/")
+            skolemized.namespace_manager = v_graph.namespace_manager
+            return Response(skolemized.serialize(format=out_format), mimetype=OUTPUT_FORMATS[out_format])
 
-    if request.method == 'GET':
-        render_template("index.html")
 
-# @app.route('/')
-# def hello_world():
-#        return 'Tangram services are described at the GitHub Repo'
+    def get(self):
+        '''
+        Perform SHACL validation on provided data and SHACL sources.
+        ---
+        parameters:
+        - name: "datagraph"
+          in: "query"
+          description: "URL for data graph source"
+          required: true
+        - name: "shapegraph"
+          in: "query"
+          description: "URL for SHACL graph source"
+          required: true
+        - name: format
+          in: "query"
+          description: Format of response
+          type: "array"
+          items:
+            type: "string"
+            enum:
+            - "human"
+            - "json-ld"
+            - "turtle"
+            - "nt"
+            - "n3"
+            default: "human"
+          collectionFormat: "single"
+        produces:
+          - text/plain
+          - text/turtle
+          - application/n-triples
+          - application/ld+json
+        responses:
+          422:
+            description: Missing or invalid input data
+          200:
+            description: Result of SHACL evaluation
+        '''
+        data_graph = None
+        shacl_graph = None
+        try:
+            data_graph = rdflib.ConjunctiveGraph()
+            data_graph.parse(request.args.get['datagraph'], format="json-ld")
+        except KeyError as e:
+            return Response(status=422, response="Data graph URL is required.")
+        except Exception as e:
+            return Response(status=422, response=str(e))
+        try:
+            shacl_graph = rdflib.ConjunctiveGraph()
+            shacl_graph.parse(request.files['shapegraph'], format="turtle")
+        except KeyError as e:
+            return Response(status=422, response="SHACL shape graph URL is required.")
+        except Exception as e:
+            return Response(status=422, response=str(e))
+        out_format = request.args.get('format', 'human')
+        if out_format not in OUTPUT_FORMATS.keys():
+            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
+        return self.doVerification(data_graph, shacl_graph, out_format)
+
+
+    def post(self):
+        '''
+        Perform SHACL validation on provided data and SHACL shape graphs.
+        ---
+        consumes:
+          - multipart/form-data
+        produces:
+          - text/plain
+          - text/turtle
+          - application/n-triples
+          - application/ld+json
+        parameters:
+          - in: formData
+            name: datagraph
+            description: Data graph file
+            type: file
+            required: true
+          - in: formData
+            name: shapegraph
+            description: SHACL shape graph file
+            type: file
+            required: true
+          - in: formData
+            name: format
+            description: Format of response
+            type: "array"
+            items:
+              type: "string"
+              enum:
+              - "human"
+              - "json-ld"
+              - "turtle"
+              - "nt"
+              - "n3"
+              default: "human"
+            collectionFormat: "single"
+        responses:
+          422:
+            description: Missing or invalid input data
+          200:
+            description: Result of SHACL evaluation
+
+        '''
+        data_graph = None
+        shacl_graph = None
+        try:
+            data_graph = rdflib.ConjunctiveGraph()
+            data_graph.parse(request.files['datagraph'], format="json-ld")
+        except KeyError as e:
+            return Response(status=422, response="Data graph file is required.")
+        except Exception as e:
+            return Response(status=422, response=str(e))
+        try:
+            shacl_graph = rdflib.ConjunctiveGraph()
+            shacl_graph.parse(request.files['shapegraph'], format="turtle")
+        except KeyError as e:
+            return Response(status=422, response="SHACL shape graph file is required.")
+        except Exception as e:
+            return Response(status=422, response=str(e))
+        out_format = request.form.get('format', 'human')
+        app.logger.debug("out_format = %s", out_format)
+        if out_format not in OUTPUT_FORMATS.keys():
+            return Response(status=422, response=f"Unrecognized format requested: {out_format}")
+        return self.doVerification(data_graph, shacl_graph, out_format)
+
+
+app.add_url_rule('/verify', view_func=VerifyView.as_view('verify'))
+app.add_url_rule('/uploader', view_func=VerifyView.as_view('uploader'))
+
+
 @app.route("/")
 def index():
-
-    ct = request.headers.get('Accept')
-
-    if "text/html" in ct:
-        return render_template("index.html")
-    else:
-        return render_template("index.txt")
+    return redirect("/apidocs")
 
 
 if __name__ == "__main__":
