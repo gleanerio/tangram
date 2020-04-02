@@ -127,12 +127,14 @@ class VerifyView(MethodView):
         parameters:
           - name: "datagraph"
             in: "query"
-            description: "URL for data graph source"
             required: true
+            description: "URL for data graph source"
+            default: "https://raw.githubusercontent.com/datadavev/science-on-schema.org/2020-SOSOV/validation/testingDataGraphs/ds_badns1.json"
           - name: "shapegraph"
             in: "query"
-            description: "URL for SHACL graph source"
             required: true
+            description: "URL for SHACL graph source"
+            default: "https://raw.githubusercontent.com/datadavev/science-on-schema.org/2020-SOSOV/validation/shapes/so_namespace.ttl"
           - name: format
             in: "query"
             description: Format of response
