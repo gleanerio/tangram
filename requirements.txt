@@ -1,0 +1,9 @@
+requests
+flask
+flask-cors
+flasgger
+#rdflib        Use copy from Github
+#rdflib-jsonld Use copy from Github
+pyshacl
+beautifulsoup4
+
