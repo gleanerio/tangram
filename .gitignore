@@ -1,5 +1,7 @@
 .idea
 lambda_env/
+src/zappa_settings.json
+src/lambda_role_policy.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

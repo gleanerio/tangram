@@ -115,12 +115,12 @@ aws iam attach-role-policy \
     --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
 #Update the role policy with the account number
-sed "s/__ACOUNT_ID__/${ACCOUNT_ID}/g" aws_lambda/role_policy_template.json > "role_policy_${ACCOUNT_ID}.json"
+sed "s/__ACOUNT_ID__/${ACCOUNT_ID}/g" aws_lambda/role_policy_template.json > "lambda_role_policy.json"
 
 aws iam put-role-policy \
     --role-name ZappaLambdaExecution \
     --policy-name AWSLambdaBasicExecutionRole \
-    --policy-document "file://role_policy_${ACCOUNT_ID}.json" 
+    --policy-document "file://lambda_role_policy.json" 
 
 #Create zappa_settings.json with the account id in the current folder
 sed "s/__ACCOUNT_ID__/${ACCOUNT_ID}/g" aws_lambda/zappa_settings_template.json > zappa_settings.json
