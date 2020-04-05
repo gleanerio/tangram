@@ -2,7 +2,6 @@
 
 ## About
 
-![Tangram](./tangram_square.svg)
 <img width="36" src="./tangram_square.svg"> Tangram applies [SHACL](https://www.w3.org/TR/shacl/) graphs to [schema.org
 ](https://schema.org) graphs 
 to evaluate conformance with [ESIP Science-on-Schema.org](https://github.com/ESIPFed/science-on-schema.org) guidelines.
