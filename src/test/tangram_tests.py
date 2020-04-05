@@ -24,8 +24,8 @@ class TestTangram:
             "format":"bogus"
         }
         files = {
-            "datagraph": open("../science-on-schema.org/validation/testingDataGraphs/ds_badns1.json","rb"),
-            "shapegraph": open("../science-on-schema.org/validation/shapes/so_namespace.ttl","rb"),
+            "datagraph": open("../../../science-on-schema.org/validation/testingDataGraphs/ds_badns1.json", "rb"),
+            "shapegraph": open("../../../science-on-schema.org/validation/shapes/so_namespace.ttl", "rb"),
         }
         url = "http://localhost:8080/verify"
         res = requests.post(url ,data=data, files=files)
@@ -35,8 +35,8 @@ class TestTangram:
             "format":"turtle"
         }
         files = {
-            "datagraph": open("../science-on-schema.org/validation/testingDataGraphs/ds_badns1.json","rb"),
-            "shapegraph": open("../science-on-schema.org/validation/shapes/so_namespace.ttl","rb"),
+            "datagraph": open("../../../science-on-schema.org/validation/testingDataGraphs/ds_badns1.json", "rb"),
+            "shapegraph": open("../../../science-on-schema.org/validation/shapes/so_namespace.ttl", "rb"),
         }
         res = requests.post(url ,data=data, files=files)
         with capsys.disabled():
