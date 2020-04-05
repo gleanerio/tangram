@@ -1,4 +1,4 @@
-# <img src="./tangram_square.svg" width="40px" /> Tangram
+# <img src="./docs/tangram_square.svg" width="40px" /> Tangram
 
 ## About
 
