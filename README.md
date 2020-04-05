@@ -58,10 +58,10 @@ This process is for local development, testing, and use. It is not suitable for 
 ```bash
 python -m venv env
 . env/bin/activate
-pip install -e git+https://github.com/RDFLib/rdflib.git@af625d0bc48b656b614629b9ad56df63b88a0d17#egg=rdflib
-pip install -e git+https://github.com/RDFLib/rdflib-jsonld.git@070d45cad067276e72df5d8f362aee65c158df40#egg=rdflib_jsonld
-pip install -r requirements.txt
-python app.py
+pip install -e "git+git://github.com/RDFLib/rdflib.git#egg=rdflib"
+pip install -e "git+git://github.com/RDFLib/rdflib-jsonld.git#egg=rdflib_jsonld"
+pip install -r requirements-web.txt
+python tangram_web.py
 #Open http://localhost:8080 in a browser
 ```
 
@@ -69,11 +69,14 @@ python app.py
 
 Docker offers a simple path for deploying Tangram as a production service.
 
+The following provides a local test deployment that is removed when the docker image is shutdown:
+
 ```bash
 make docker
-docker run --publish 8080:8080 --name tangram "fils/p418tangram:$(cat VERSION)"
+docker run --rm --publish 8080:8080 --name tangram "fils/p418tangram:$(cat VERSION)"
 #Open http://localhost:8080 in a browser
 ```
+
 
 ### AWS Lambda
 
