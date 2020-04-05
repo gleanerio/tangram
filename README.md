@@ -31,17 +31,19 @@ Invoke the tool with something like:
 With httpie client:
 
 ```bash
-httpclient -f POST https://tangram.gleaner.io/uploader  datagraph@./datagraphs/dataset-minimal-BAD.json-ld  shapegraph@./shapegraphs/googleRecommended.ttl format=human
-
-localhost
-httpclient -f POST http://localhost:8080/uploader  datagraph@./datagraphs/dataset-minimal-BAD.json-ld  shapegraph@./shapegraphs/googleRecommended.ttl format=human
-
+httpclient -f POST https://localhost:8080/verify  \
+  dg@./datagraphs/dataset-minimal-BAD.json-ld \
+  sg@./shapegraphs/googleRecommended.ttl \
+  fmt=human
 ```
 
 Or with good old curl (with format set to huam):
 
 ```bash
-curl -F  'datagraph=@./datagraphs/dataset-minimal-BAD.json-ld'  -F  'shapegraph=@./shapegraphs/googleRecommended.ttl' -F 'format=human'  https://tangram.gleaner.io/uploader
+curl -F 'dg=@./datagraphs/dataset-minimal-BAD.json-ld'  \
+     -F 'sg=@./shapegraphs/googleRecommended.ttl' \
+     -F 'fmt=human'  \
+     https://localhos:8080/verify
 ```
 
 ## Tangram testing a web page
