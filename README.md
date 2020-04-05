@@ -46,12 +46,6 @@ curl -F 'dg=@./datagraphs/dataset-minimal-BAD.json-ld'  \
      https://localhos:8080/verify
 ```
 
-## Tangram testing a web page
-
-```bash
-httpclient "https://tangram.gleaner.io/ucheck?url=http://opencoredata.org/doc/dataset/b8d7bd1b-ef3b-4b08-a327-e28e1420adf0&format=human&shape=required"
-```
-
 ## Install
 
 ### Local development install and run
