@@ -71,7 +71,7 @@ Docker offers a simple path for deploying Tangram as a production service.
 
 ```bash
 make docker
-docker run run --publish 8080:8080 --name tangram fils/p418tangram:0.1.17
+docker run --publish 8080:8080 --name tangram "fils/p418tangram:$(cat VERSION)"
 #Open http://localhost:8080 in a browser
 ```
 
@@ -125,7 +125,7 @@ sed "s/__ACCOUNT_ID__/${ACCOUNT_ID}/g" aws_lambda/zappa_settings_template.json >
 
 3. Deploy the Lambda
 
-The following all assume `cwd` is the folder containing `sosov_app.py`.
+The following all assume `cwd` is the folder containing `tangram_web.py`.
 
 ```shell script
 $ zappa deploy dev

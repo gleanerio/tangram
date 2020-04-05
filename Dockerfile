@@ -21,5 +21,4 @@ RUN pip install -r requirements-web.txt
 # For environments with multiple CPU cores, increase the number of workers
 # to be equal to the cores available.
 #CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 app:app
-CMD exec gunicorn --bind :8080 --workers 1 --threads 8 app:app
-
+CMD exec gunicorn --bind :8080 --workers 1 --threads 8 tangram_web:app

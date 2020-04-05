@@ -14,18 +14,18 @@ app = flask.Flask(__name__,
 app.config['SWAGGER'] = {
     'title':'Tangram',
 }
-
 swagger_template = {
     "info": {
         "title": "Tangram SHACL Verification",
         "description":"Service for evaluating schema.org content against ESIP Science on schema.org guidelines.",
         "version":"0.2.0",
     },
-    "basePath":"/dev",
+    "basePath":os.environ.get('lambda_base_path', ''),
     "schemes": [
-        "https"
+        "https","http"
     ]
 }
+
 
 swagger = Swagger(app, template=swagger_template)
 
@@ -104,9 +104,11 @@ class VerifyView(MethodView):
           200:
             description: Result of SHACL evaluation
         '''
+        app.logger.debug("GET on verify")
         data_graph = None
         shacl_graph = None
         out_format = flask.request.args.get('fmt', 'human')
+        app.logger.debug("out_format = %s", out_format)
         if out_format not in OUTPUT_FORMATS.keys():
             return response422(f"Unrecognized format requested: {out_format}")
         try:
@@ -164,6 +166,7 @@ class VerifyView(MethodView):
             description: Result of SHACL evaluation
 
         '''
+        app.logger.debug("POST on verify")
         data_graph = None
         shacl_graph = None
         out_format = flask.request.form.get('fmt', 'human')
@@ -193,7 +196,6 @@ app.add_url_rule('/verify', view_func=VerifyView.as_view('verify'))
 @app.route("/")
 def index():
     return flask.redirect("apidocs")
-
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
