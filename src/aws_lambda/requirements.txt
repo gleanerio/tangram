@@ -1,5 +1,4 @@
-flask
-flask-cors
-flasgger
-pyshacl
+# Additional requirements for deploying as a lambda function on AWS
+# These requirements are in addition to those listed in ../requirements-web.txt
+boto3
 zappa
