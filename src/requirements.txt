@@ -1,0 +1,8 @@
+#-e git+git://github.com/RDFLib/rdflib.git#egg=rdflib
+-e git+git://github.com/RDFLib/rdflib.git@af625d0bc48b656b614629b9ad56df63b88a0d17#egg=rdflib
+-e git+git://github.com/RDFLib/rdflib-jsonld.git#egg=rdflib_jsonld
+
+# This version of extruct is patched for compatibility with rdflib 5.x
+-e git+git://github.com/datadavev/extruct.git#egg=extruct
+pyshacl
+requests
