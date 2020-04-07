@@ -5,7 +5,8 @@
     "manage_roles": false,
     "role_arn": "arn:aws:iam::__ACCOUNT_ID__:role/ZappaLambdaExecution",
     "environment_variables": {
-      "lambda_base_path": "/dev"
+      "lambda_base_path": "/dev",
+      "resources_bucket": "sosov-__ACCOUNT_ID__"
     }
   }
 }

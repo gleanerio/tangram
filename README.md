@@ -90,8 +90,8 @@ is with a virtual environment.
 ```shell script
 python -m venv lambda_env
 . lambda_env/bin/activate
-pip install -e "git+git://github.com/RDFLib/rdflib.git#egg=rdflib"
-pip install -e "git+git://github.com/RDFLib/rdflib-jsonld.git#egg=rdflib_jsonld"
+pip install -r requirements.txt
+pip install -r requirements-web.txt
 pip install -r aws_lambda/requirements.txt
 ```
 
