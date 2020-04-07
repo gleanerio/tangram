@@ -18,7 +18,7 @@ def listNodeShapes(g):
         print("===")
 
 
-def validateSHACL(data_graph, shacl_graph=None, ont_graph=None):
+def validateSHACL(data_graph, shacl_graph=None, ont_graph=None, meta_shacl=False, advanced=False):
     """
     Validate data against a SHACL shape using common options.
 
@@ -37,17 +37,22 @@ def validateSHACL(data_graph, shacl_graph=None, ont_graph=None):
         shape_graph (:class:`~rdflib.graph.Graph`): A SHACL shape graph
         data_graph (:class:`~rdflib.graph.Graph`): Data graph to be validated with shape_graph
         ontology_graph (:class:`~rdflib.graph.Graph`): Optional ontology graph to be added to the data graph
+        meta_shacl: (boolean) Perform tests against shacl shape
+        advanced: (boolean) Enable advanced functionality, required for SPARQL
 
     Returns (tuple): Conformance (boolean), result graph (:class:`~rdflib.graph.Graph`) and result text
     """
+    inference = None
+    if ont_graph is not None:
+        inference = 'rdfs'
     conforms, result_graph, result_text = pyshacl.validate(
         data_graph,
         shacl_graph=shacl_graph,
         ont_graph=ont_graph,
-        inference="rdfs",
-        meta_shacl=True,
+        inference=inference,
+        meta_shacl=meta_shacl,
         abort_on_error=False,
         debug=False,
-        advanced=True,
+        advanced=advanced,
     )
     return conforms, result_graph, result_text
