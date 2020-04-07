@@ -9,14 +9,11 @@ from pyshacl import validate
 from flasgger import Swagger
 from extruct.jsonld import JsonLdExtractor
 
-import stat
-import sosov.webdriver_wrapper
-
 IS_LAMBDA = False
 s3_client = None
-import boto3
 
 if 'SERVERTYPE' in os.environ and os.environ['SERVERTYPE'] == 'AWS Lambda':
+    import boto3
     IS_LAMBDA = True
     s3_client = boto3.client("s3")
 
@@ -295,40 +292,6 @@ def getSchemaOrg():
 def index():
     return flask.redirect("apidocs")
 
-@app.route("/hextract")
-def testSelenium():
-    # copy the binary over form s3 if necessary
-    if IS_LAMBDA:
-        fn_binary = "/tmp/bin/headless-chromium"
-        fn_driver = "/tmp/bin/chromedriver"
-        os.makedirs("/tmp/bin", exist_ok=True)
-        if not os.path.exists(fn_binary):
-            app.logger.info("Refresh cache of headless-chromium")
-            bucket = os.environ.get("resources_bucket", "sosov-data")
-            s3_client.download_file(bucket, "resources/bin/headless-chromium", fn_binary)
-            st = os.stat(fn_binary)
-            os.chmod(fn_binary, st.st_mode | stat.S_IEXEC)
-        if not os.path.exists(fn_driver):
-            app.logger.info("Refresh cache of chromedriver")
-            bucket = os.environ.get("resources_bucket", "sosov-data")
-            s3_client.download_file(bucket, "resources/bin/chromedriver", fn_driver)
-            st = os.stat(fn_driver)
-            os.chmod(fn_driver, st.st_mode | stat.S_IEXEC)
-        app.logger.info("Loading chromium...")
-        driver = sosov.webdriver_wrapper.WebDriverWrapper()
-        app.logger.info("Loading page...")
-        driver.get_url("https://search.dataone.org/view/doi:10.18739/A2X34MS1B")
-        html = driver._driver.page_source
-        driver.quit()
-        app.logger.info("done.")
-        return html
-
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(os.environ.get("resources_bucket", "sosov-776338093124"))
-    res = []
-    for obj in bucket.objects.all():
-        res.append(f"{bucket.name} : {obj.key}")
-    return flask.Response("\n".join(res), mimetype="text/plain")
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
