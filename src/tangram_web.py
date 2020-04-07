@@ -1,11 +1,24 @@
 import os
-import flask #from flask import Flask, Response, request, redirect
+import json
+import requests
+import flask
 from flask.views import MethodView
 from flask_cors import CORS
 import rdflib
 from pyshacl import validate
-
 from flasgger import Swagger
+from extruct.jsonld import JsonLdExtractor
+
+import stat
+import sosov.webdriver_wrapper
+
+IS_LAMBDA = False
+s3_client = None
+import boto3
+
+if 'SERVERTYPE' in os.environ and os.environ['SERVERTYPE'] == 'AWS Lambda':
+    IS_LAMBDA = True
+    s3_client = boto3.client("s3")
 
 app = flask.Flask(__name__,
             static_url_path='',
@@ -40,8 +53,29 @@ OUTPUT_FORMATS = {
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+
+def getSchemaOrgTurtlePath():
+    if IS_LAMBDA:
+        fn_schema = "/tmp/schema.org.ttl"
+        if not os.path.exists(fn_schema):
+            app.logger.info("Refresh cache of schemaorg.ttl")
+            bucket = os.environ.get("resources_bucket", "sosov-data")
+            s3_client.download_file(bucket, "resources/data/schema.org.ttl", fn_schema)
+        return fn_schema
+    return os.abspath("resources/data/schema.org.ttl")
+
+
 def response422(msg):
     return flask.Response(status=422, response=msg)
+
+
+def getJsonLdFromHTML(html_text):
+    """
+    Returns an array of json_ld structures found in the provided html_text
+    """
+    jslde = JsonLdExtractor()
+    return jslde.extract(html_text)
+
 
 class VerifyView(MethodView):
 
@@ -82,6 +116,13 @@ class VerifyView(MethodView):
             required: true
             description: "URL for data graph source"
             default: "https://raw.githubusercontent.com/datadavev/science-on-schema.org/2020-SOSOV/validation/testingDataGraphs/ds_badns1.json"
+          - name: "df"
+            in: "query"
+            required: false
+            description: "Format for datagraph"
+            type: "string"
+            enum: ["html","json-ld","turtle","nt","n3"]
+            default: "json-ld"
           - name: "sg"
             in: "query"
             required: true
@@ -113,7 +154,17 @@ class VerifyView(MethodView):
             return response422(f"Unrecognized format requested: {out_format}")
         try:
             data_graph = rdflib.ConjunctiveGraph()
-            data_graph.parse(flask.request.args['dg'], format="json-ld")
+            data_format = flask.request.args['df']
+            data_url = flask.request.args['dg']
+            if data_format == 'html':
+                response = requests.get(data_url)
+                if response.status_code != 200:
+                    raise ValueError(f"Bad response ({response.status_code}) from dg = {data_url}")
+                json_content = getJsonLdFromHTML(response.text)
+                for json_data in json_content:
+                    data_graph.parse(data=json.dumps(json_data), format="json-ld", publicID=data_url)
+            else:
+                data_graph.parse(flask.request.args['dg'], format="json-ld")
         except KeyError as e:
             return response422("Data graph URL is required.")
         except Exception as e:
@@ -193,9 +244,91 @@ class VerifyView(MethodView):
 app.add_url_rule('/verify', view_func=VerifyView.as_view('verify'))
 
 
+@app.route("/extract")
+def getHtmlFromUrl():
+    '''
+    Return json-ld extracted from a URL.
+
+    Attempts to extract json-ld from the HTML at the provided URL. The response is an array of
+    json-ld blocks that were discovered.
+    ---
+    produces:
+      - application/ld+json
+    parameters:
+      - name: "url"
+        in: "query"
+        required: true
+        type: string
+        description: "URL of page to extract JSON-LD from"
+    responses:
+      422:
+        description: "Something went wrong retrieving content from the URL"
+      200:
+        description: "Array of retrieved json-ld content"
+    '''
+    url = flask.request.args['url']
+    app.logger.debug("requested url = %s", url)
+    response = requests.get(url)
+    if response.status_code == 200:
+        return flask.Response(response=json.dumps(getJsonLdFromHTML(response.text)), mimetype=OUTPUT_FORMATS['json-ld'])
+    return response422(f"Bad response ({response.status_code}) from url = {url}")
+
+
+@app.route("/so")
+def getSchemaOrg():
+    '''
+    Return the cached copy of schema.org RDF in Turtle format.
+
+    A copy of the schema.org RDF with the namespace expressed in "https://schema.org/" is cached for
+    verification operations. This method returns a copy of that document.
+    ---
+    produces:
+      - text/turtle
+    responses:
+      200:
+        description: The schema.org RDF in Turtle
+    '''
+    so_turtle = getSchemaOrgTurtlePath()
+    return flask.Response(open(so_turtle,"rb").read(), mimetype=OUTPUT_FORMATS["turtle"])
+
 @app.route("/")
 def index():
     return flask.redirect("apidocs")
+
+@app.route("/hextract")
+def testSelenium():
+    # copy the binary over form s3 if necessary
+    if IS_LAMBDA:
+        fn_binary = "/tmp/bin/headless-chromium"
+        fn_driver = "/tmp/bin/chromedriver"
+        os.makedirs("/tmp/bin", exist_ok=True)
+        if not os.path.exists(fn_binary):
+            app.logger.info("Refresh cache of headless-chromium")
+            bucket = os.environ.get("resources_bucket", "sosov-data")
+            s3_client.download_file(bucket, "resources/bin/headless-chromium", fn_binary)
+            st = os.stat(fn_binary)
+            os.chmod(fn_binary, st.st_mode | stat.S_IEXEC)
+        if not os.path.exists(fn_driver):
+            app.logger.info("Refresh cache of chromedriver")
+            bucket = os.environ.get("resources_bucket", "sosov-data")
+            s3_client.download_file(bucket, "resources/bin/chromedriver", fn_driver)
+            st = os.stat(fn_driver)
+            os.chmod(fn_driver, st.st_mode | stat.S_IEXEC)
+        app.logger.info("Loading chromium...")
+        driver = sosov.webdriver_wrapper.WebDriverWrapper()
+        app.logger.info("Loading page...")
+        driver.get_url("https://search.dataone.org/view/doi:10.18739/A2X34MS1B")
+        html = driver._driver.page_source
+        driver.quit()
+        app.logger.info("done.")
+        return html
+
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(os.environ.get("resources_bucket", "sosov-776338093124"))
+    res = []
+    for obj in bucket.objects.all():
+        res.append(f"{bucket.name} : {obj.key}")
+    return flask.Response("\n".join(res), mimetype="text/plain")
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))

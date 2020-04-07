@@ -98,7 +98,7 @@ pip install -r aws_lambda/requirements.txt
 2. Prepare AWS IAM role for running the task
 
 ```shell script
-# cd to the folder that contains sosov_app.py
+# cd to the folder that contains lambda_web.py
 # Set this to the account ID
 ACCOUNT_ID="77633809XXXX"
 
@@ -145,3 +145,8 @@ To remove the Lambda operation
 $ zappa undeploy dev
 ```
 
+Pushing resources to S3
+
+```shell script
+aws s3 cp --recursive resources s3://sosov-${ACCOUNT_ID}/resources
+```
