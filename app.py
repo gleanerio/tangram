@@ -23,6 +23,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 # It will be method GET with ?url=URL&format=[human,machine]&shape=[required,recommended]
 # /rescheck
 @app.route('/ucheck', methods=['GET'])
+@app.route('/gds', methods=['GET'])
 def netcheck():
     if request.method == 'GET':
         u = request.args.get('url')  # if key doesn't exist, returns None
@@ -64,9 +65,10 @@ def netcheck():
         else:
             return v_graph.serialize(format="nt")
 
-# /validate 
+# /validate
 
 @app.route('/uploader', methods=['GET', 'POST'])
+@app.route('/validate', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         # should try these too then error if not loadable to graph
@@ -95,9 +97,9 @@ def upload_file():
         if f == 'human':
             return '{} {}'.format(conforms, v_text)
         else:
-            # return v_graph.serialize(format="nt")
-            skolemver = v_graph.skolemize(authority="http://ld.geoschemas.org")
-            return skolemver.serialize(format="nt")
+            return v_graph.serialize(format="nt")
+            #skolemver = v_graph.skolemize(authority="http://ld.geoschemas.org")
+            #return skolemver.serialize(format="nt")
 
     if request.method == 'GET':
         render_template("index.html")
